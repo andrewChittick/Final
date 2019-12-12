@@ -1,0 +1,18 @@
+/************************
+ * pinball.css
+ * Andrew Chittick
+ * 9/27/19k
+ ***********************/
+
+
+body{
+	background-color:gray;
+}
+#surface{
+	background-color:grey;
+	border-radius:10px;
+	box-shadow: 0 2px 15px black;
+	position: absolute;
+	left: 100px;
+	top: 25px;
+}
