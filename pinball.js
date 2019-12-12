@@ -63,18 +63,21 @@ function drawBall(){
 
   collision = false;
   dy += gravity;
-  //check full circumference collisions
-  for (var i=0; i<628; i++){
-    var circumX = ballX + ballRadius * Math.cos(i/100);
-    var circumY = ballY + ballRadius * Math.sin(i/100);
-    checkCircleCollisions(circumX, circumY, i/100);
+
+  var theta = (Math.atan(dy/dx) - 1.57) *10;
+
+  for (var i = 0; i < 31; i++, theta++){
+    var circumX = ballX + ballRadius * Math.cos(theta/10);
+    var circumY = ballY + ballRadius * Math.sin(theta/10);
+    checkCircleCollisions(circumX, circumY, theta/10);
   }
+
+
+  //for (var i=0; i<628; i+=10){}
   checkVerticalCollisions();
   checkHorizontalCollisions();
-  checkRamps();
-  //checkPaddles();
-  //console.log(collision);
 
+  //add force
   ballX += dx;
   ballY += dy;
 }
@@ -100,16 +103,21 @@ function checkHorizontalCollisions(){
 }
 function checkVerticalCollisions(){
   //left outer wall
-  if (ballX-ballRadius <= 100){dx=-dx}
+  if (ballX-ballRadius <= 100 && ballY >= 250){dx=-dx * .9}
   //ball chute wall
   if (ballY >= 300){
     if (ballX + ballRadius >= 450){
-      dx = -dx;
+      dx = -dx * .9;
     }
   }
+  //right outer wall
+  if (ballX+ballRadius >= 500 && ballY >= 250){dx=-dx * .9}
   //if (ballX+ballRadius >= 450 && ballX < 450){dx=-dx}
 }
 function checkCircleCollisions(circumX, circumY, theta){
+  var force = Math.sqrt(dx*dx + dy*dy);
+  //dampen
+  force = force * .9;
   //roof
   //(x-h)^2 + (y-k)^2 = 205^2
   //(y-250)(y-250) = 205^2 -(ballX-300)^2
@@ -124,18 +132,38 @@ function checkCircleCollisions(circumX, circumY, theta){
   //var roofY = 250 - (205 * )
   //var roofY = -20475 - ((ballX-300) * (ballX-300));
   //console.log(roofY);
-  if (circumY <= roofY){
-    //console.log("roof");
-    collision = true;
-    //var theta = Math.acos((circumX-300)/ballRadius);
-    var force = Math.sqrt(dx*dx + dy*dy);
+  if (circumY <= roofY+5){
     dx = - (Math.cos(theta)) * force;
     dy = - (Math.sin(theta)) * force;
-    //console.log(Math.cos(theta));
-    //ballX += dx;
-    //ballY += dy;
-
   }
+
+  //ramps
+  if (ballY + ballRadius >= 440){
+    if (ballY - ballRadius > 480 && ballX + ballRadius <= 455){
+      dy = 5;
+      //console.log("oop");
+    }
+
+    //left ramp
+    else if (ballX-ballRadius < 175){
+      if (circumY >= (440 - (.5 *(95 - circumX)))){
+        dx = -(Math.cos(theta)) * force;
+        dy = - (Math.sin(theta)) * force;
+        //console.log("left ramp");
+      }
+    }
+    //right ramp
+    else if (ballX+ballRadius > 375 && ballX + ballRadius < 455 && circumY >= (440 + (.5 *(455 - circumX)))){
+      dx = - (Math.cos(theta)) * force;
+      dy = - (Math.sin(theta)) * force;
+      //console.log("right ramp");
+    }
+  }
+
+  //left paddle
+
+
+
   //right wall inner
   //right wall outer
   //left wall
@@ -177,7 +205,7 @@ function gameLoop(){
 	//left paddle
 	if (left){
     if (leftDeg > -30){
-      leftDeg--;
+      leftDeg-=3;
     }
 	}
   else if (leftDeg <30){
@@ -186,7 +214,7 @@ function gameLoop(){
 	//right paddle
 	if (right){
     if (rightDeg < 210){
-      rightDeg++;
+      rightDeg+=3;
     }
 	}
   else if (rightDeg > 150){
