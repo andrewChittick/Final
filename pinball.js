@@ -26,7 +26,7 @@ var leftDeg = 30;
 var rightDeg = 150;
 //var rightX = 305;
 //var rightY = 515;
-var gravity = .1;
+var gravity = .3;
 var dampen = .3;
 var ballX = 480;
 var ballY = 440;
@@ -53,7 +53,9 @@ function init(){
 		setInterval(gameLoop, 30);
 	}
 }
-var collision = false;
+
+var force = 0;
+
 function drawBall(){
 	con.beginPath();
 		con.fillStyle = "red";
@@ -61,63 +63,128 @@ function drawBall(){
 		con.closePath();
 	con.fill();
 
-  collision = false;
+
   dy += gravity;
 
-  var theta = (Math.atan(dy/dx) - 1.57) *10;
+
+  if (dx !=0){
+    var theta = (Math.atan(-dy/dx) ) *10;
+  }
+  else{
+    var theta = (Math.atan(-dy/.00000001) ) *10;
+  }
+  theta = theta - 15.7;
+  /*console.log(theta);
+  if (dx < 0 && dy <0){//q3
+    theta = theta + 31.4;
+  }
+  else if (dx > 0 && dy < 0){//q4
+    theta = theta + 31.4;
+  }
+  */
+  //console.log(theta);
+  force = Math.sqrt(dx*dx + dy*dy);
 
   for (var i = 0; i < 31; i++, theta++){
     var circumX = ballX + ballRadius * Math.cos(theta/10);
     var circumY = ballY + ballRadius * Math.sin(theta/10);
-    checkCircleCollisions(circumX, circumY, theta/10);
+    var keepGoing = checkCircleCollisions(circumX, circumY, theta/10);
+    if (keepGoing == false){
+      ballX += dx;
+      ballY += dy;
+      break;
+    }
   }
 
 
   //for (var i=0; i<628; i+=10){}
-  checkVerticalCollisions();
-  checkHorizontalCollisions();
-
-  //add force
+  force = Math.sqrt(dx*dx + dy*dy);
+  var collision = false;
+  collision = checkVerticalCollisions();
+  if (collision == true){
+    ballX += dx;
+    ballY += dy;
+    console.log("vert");
+    collision = false;
+  }
+  force = Math.sqrt(dx*dx + dy*dy);
+  collision = checkHorizontalCollisions();
+  if (collision == true){
+    ballX += dx;
+    ballY += dy;
+    //console.log("horiz");
+    collision = false;
+  }
   ballX += dx;
   ballY += dy;
+
+  //game over
+  if (ballY > 520 && ballX < 455){
+    ballX = 480;
+    ballY = 440;
+    dx = 0;
+    dy = 0;
+  }
 }
 function checkHorizontalCollisions(){
 	//check collision
+  var collide = false
   //plunger
   if (ballX >= 455 && ballX<= 505){
     if (ballY + ballRadius >= plungerHeight-5){
       if (dy>0){
         //dy = -dy;
         //console.log("plunger");
-        collision = true;
         //ballY = plungerHeight - ballRadius;
         //console.log(collision);
         dy=0;
+        if (ballY + ballRadius > plungerHeight - 5){
+          ballY--;
+        }
+        collide = true;
       }
       if (plungerUp){
-        dy-=5;
+        dy-=25 * ((plungerHeight - 465)/100);
+
+        collide = true;
         //ballY+=dy;
       }
     }
   }
+  return collide;
 }
 function checkVerticalCollisions(){
   //left outer wall
-  if (ballX-ballRadius <= 100 && ballY >= 250){dx=-dx * .9}
+  if (ballX-ballRadius - force <= 100 && ballY >= 250){
+    if (dx < 0){
+      dx=-dx * .95;
+      if (ballX-ballRadius < 100){
+        ballX = 100+ballRadius;
+      }
+      return true;
+    }
+  }
   //ball chute wall
   if (ballY >= 300){
-    if (ballX + ballRadius >= 450){
-      dx = -dx * .9;
+    if (ballX + ballRadius + force > 450 && ballX - ballRadius < 450){
+      dx = -dx * .95;
+      console.log("bb");
+      return true;
     }
   }
   //right outer wall
-  if (ballX+ballRadius >= 500 && ballY >= 250){dx=-dx * .9}
+  if (ballX+ballRadius > 500 && ballY >= 250){
+    dx=-dx * .95;
+    return true;
+  }
+  return false;
   //if (ballX+ballRadius >= 450 && ballX < 450){dx=-dx}
 }
 function checkCircleCollisions(circumX, circumY, theta){
-  var force = Math.sqrt(dx*dx + dy*dy);
+  //var force = Math.sqrt(dx*dx + dy*dy);
   //dampen
-  force = force * .9;
+  //force = force * .9;
+  //console.log(force);
   //roof
   //(x-h)^2 + (y-k)^2 = 205^2
   //(y-250)(y-250) = 205^2 -(ballX-300)^2
@@ -132,31 +199,39 @@ function checkCircleCollisions(circumX, circumY, theta){
   //var roofY = 250 - (205 * )
   //var roofY = -20475 - ((ballX-300) * (ballX-300));
   //console.log(roofY);
-  if (circumY <= roofY+5){
-    dx = - (Math.cos(theta)) * force;
-    dy = - (Math.sin(theta)) * force;
+  if (circumY -force <= roofY+5){
+    dy =  Math.abs(Math.sin(theta)) * force *.95;
+    if (ballX > 300){
+      dx = - Math.abs(Math.cos(theta)) * force *.95;
+    }
+    else {
+      dx = Math.abs(Math.cos(theta)) * force *.95;
+    }
+    return false;
   }
 
   //ramps
   if (ballY + ballRadius >= 440){
-    if (ballY - ballRadius > 480 && ballX + ballRadius <= 455){
-      dy = 5;
-      //console.log("oop");
-    }
+
+//absolute value???
 
     //left ramp
-    else if (ballX-ballRadius < 175){
-      if (circumY >= (440 - (.5 *(95 - circumX)))){
-        dx = -(Math.cos(theta)) * force;
-        dy = - (Math.sin(theta)) * force;
+    if (ballX-ballRadius < 175){
+      if (circumY + force  >= (440 - (.5 *(95 - circumX))-3 )){
+        dx =  (Math.abs(Math.cos(theta)) * force*.95 + .87*gravity);
+        dy =  ((Math.sin(theta)) * force *.95);
+        if (dy>0){dy=-dy}
         //console.log("left ramp");
+        return false;
       }
     }
     //right ramp
-    else if (ballX+ballRadius > 375 && ballX + ballRadius < 455 && circumY >= (440 + (.5 *(455 - circumX)))){
-      dx = - (Math.cos(theta)) * force;
-      dy = - (Math.sin(theta)) * force;
-      //console.log("right ramp");
+    else if (ballX+ballRadius > 375 && ballX + ballRadius < 455 && circumY + force >= (440 + (.5 *(455 - circumX))-3 )){
+      dx = - Math.abs(Math.cos(theta)) * force*.95 - .87*gravity;
+      dy =  ((Math.sin(theta)) * force *.95);
+      if (dy>0){dy=-dy}
+      //console.log("right ramp " + dy);
+      return false;
     }
   }
 
@@ -175,6 +250,7 @@ function checkCircleCollisions(circumX, circumY, theta){
 		dy = -dy;
 	}
   */
+  return true;
 }
 
 var plungerUp = false;
