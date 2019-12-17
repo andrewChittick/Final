@@ -13,28 +13,29 @@
 //canvas variables
 var canvas; //600 x 600  board is 40,40
 var con;
+
+//user input variables
+K_LEFT = 37; K_RIGHT = 39; K_DOWN = 40; K_A = 65; K_S = 83; K_D = 68;
 var down = false;
 var left = false;
 var right = false;
 
-//
 //plunger variables
 var plungerHeight = 465;
-//var leftX = 245;
-//var leftY = 515;
+//paddle variables
 var leftDeg = 30;
 var rightDeg = 150;
-//var rightX = 305;
-//var rightY = 515;
-var gravity = .3;
-var dampen = .3;
+
+//ball/motion variables
 var ballX = 480;
 var ballY = 440;
 var ballRadius = 20;
 var dx = 0;
 var dy = 0;
+var force = 0;
+var gravity = -.3;
+var dampen = .97;
 
- K_LEFT = 37; K_RIGHT = 39; K_DOWN = 40; K_A = 65; K_S = 83; K_D = 68;
 //end vars
 ///////////////////////////////////////////////////////////////////////
 //
@@ -42,19 +43,19 @@ var dy = 0;
 
 //
 //gets the con(text)
-//checks for mouse up and mouse down
-//
+//runs the game loop
 function init(){
 	canvas = document.getElementById("surface");
 	if (canvas.getContext){
 		con = canvas.getContext('2d');
 		border();
 		//game loop
-		setInterval(gameLoop, 30);
+    console.log("ramp: " + (Math.atan(-.5)+Math.PI));
+    console.log("right roof " + Math.atan2(-(45-250),(300-505)));
+    console.log("left roof " + (Math.atan2(-(250-45),(95-300))+Math.PI*2));
+		setInterval(gameLoop, 20);
 	}
 }
-
-var force = 0;
 
 function drawBall(){
 	con.beginPath();
@@ -63,60 +64,102 @@ function drawBall(){
 		con.closePath();
 	con.fill();
 
-
-  dy += gravity;
-
-
-  if (dx !=0){
-    var theta = (Math.atan(-dy/dx) ) *10;
-  }
-  else{
-    var theta = (Math.atan(-dy/.00000001) ) *10;
-  }
-  theta = theta - 15.7;
-  /*console.log(theta);
-  if (dx < 0 && dy <0){//q3
-    theta = theta + 31.4;
-  }
-  else if (dx > 0 && dy < 0){//q4
-    theta = theta + 31.4;
-  }
-  */
-  //console.log(theta);
+  //get force and direction
   force = Math.sqrt(dx*dx + dy*dy);
+  /*
+  var theta = Math.atan2(-dy,dx) *10;
+  if (theta < 0){theta+=Math.PI*20}
+  console.log("THETA: " + theta);
+	*/
 
-  for (var i = 0; i < 31; i++, theta++){
-    var circumX = ballX + ballRadius * Math.cos(theta/10);
-    var circumY = ballY + ballRadius * Math.sin(theta/10);
-    var keepGoing = checkCircleCollisions(circumX, circumY, theta/10);
-    if (keepGoing == false){
-      ballX += dx;
-      ballY += dy;
+  //check collisions
+  var collision = false;
+  //check circular collisions
+	collision = checkCircle();
+	function checkCircle(){
+		var dir = Math.atan2(dy,dx);
+		//dir -= Math.PI/2;
+		if (dir < 0){
+			dir = Math.PI;
+		}
+		else{
+			dir = 0;
+		}
+		//console.log("dir " + dir);
+		//var dir = 0;
+		for (var i = 0; i<Math.PI; i+=.1){
+			if (checkCircleCollisions(ballX +ballRadius* Math.cos(dir +i), ballY + ballRadius * Math.sin(dir +i), dir +i)){
+				//collision =true;
+				//console.log("circ");
+				//break;
+				//return true;
+				//ballX += dx;
+				//ballY -= dy;
+				//var odx = dx;
+				/*var ody = dy;
+				if (checkCircle()){
+					ballX -= odx/2;
+					ballY += ody/2;
+					checkCircle();
+				}
+				*/
+				return true;
+			}
+		}
+		return false;
+	}
+	//if ()
+  /*
+  for (var i = -16; i < 17; i++){
+    var circumX = ballX + ballRadius * Math.cos((theta +i)/10);
+    var circumY = ballY + ballRadius * Math.sin((theta +i)/10);
+    if (checkCircleCollisions(circumX, circumY, (theta +i)/10)){
+      collision = true;
+      console.log("circle");
       break;
     }
   }
-
-
-  //for (var i=0; i<628; i+=10){}
-  force = Math.sqrt(dx*dx + dy*dy);
-  var collision = false;
-  collision = checkVerticalCollisions();
-  if (collision == true){
-    ballX += dx;
-    ballY += dy;
-    console.log("vert");
-    collision = false;
+  */
+  //check flat collisions
+  checkVerticalCollisions();
+  checkHorizontalCollisions();
+  /*
+  if (collision == false){
+    console.log("huh");
+    collision = checkVerticalCollisions();
   }
-  force = Math.sqrt(dx*dx + dy*dy);
-  collision = checkHorizontalCollisions();
-  if (collision == true){
-    ballX += dx;
-    ballY += dy;
-    //console.log("horiz");
-    collision = false;
+  if (!collision){
+    if (checkHorizontalCollisions()){
+      //console.log("horizontal");
+    }
   }
+  else {
+    console.log("vertical");
+  }
+  */
+
+  //apply gravity, dampen and move
+  dy += gravity;
+  //dampen
+  if (collision){
+		console.log("DAMPEN");
+    dx = dampen * dx;
+    dy = dampen * dy;
+  }
+
   ballX += dx;
-  ballY += dy;
+  ballY -= dy;
+
+  while (ballY - ballRadius  <= 250-(205 * Math.sin(Math.acos((ballX-300)/205)))){
+		//ballX -= dx;
+		console.log("while");
+		ballY += 1;
+	}
+
+	//ballY -= gravity;
+  //move
+  //console.log("ballX " +ballX);
+  //console.log("ballY " +ballY);
 
   //game over
   if (ballY > 520 && ballX < 455){
@@ -126,112 +169,124 @@ function drawBall(){
     dy = 0;
   }
 }
+//needs fixed
 function checkHorizontalCollisions(){
 	//check collision
-  var collide = false
+  var plung = false
   //plunger
   if (ballX >= 455 && ballX<= 505){
     if (ballY + ballRadius >= plungerHeight-5){
-      if (dy>0){
-        //dy = -dy;
-        //console.log("plunger");
-        //ballY = plungerHeight - ballRadius;
-        //console.log(collision);
+      if (dy<0){
+        //console.log("dyyyyyyyy");
         dy=0;
         if (ballY + ballRadius > plungerHeight - 5){
+          //console.log("ballYYYYYYYY");
           ballY--;
         }
-        collide = true;
+        plung = true;
       }
       if (plungerUp){
-        dy-=25 * ((plungerHeight - 465)/100);
-
-        collide = true;
-        //ballY+=dy;
+        //console.log("plungUP");
+        dy+=27 * ((plungerHeight - 465)/100);
+        plung = true;
       }
     }
   }
-  return collide;
+  return plung;
 }
 function checkVerticalCollisions(){
   //left outer wall
   if (ballX-ballRadius - force <= 100 && ballY >= 250){
     if (dx < 0){
-      dx=-dx * .95;
+      dx=-dx;
       if (ballX-ballRadius < 100){
         ballX = 100+ballRadius;
       }
+      console.log("lO");
       return true;
     }
   }
-  //ball chute wall
+  /*ball chute wall
   if (ballY >= 300){
     if (ballX + ballRadius + force > 450 && ballX - ballRadius < 450){
-      dx = -dx * .95;
-      console.log("bb");
+      dx = -dx;
+      //console.log("bb");
       return true;
     }
   }
+  */
   //right outer wall
   if (ballX+ballRadius > 500 && ballY >= 250){
-    dx=-dx * .95;
+    dx=-dx;
+    console.log("rO");
     return true;
   }
   return false;
-  //if (ballX+ballRadius >= 450 && ballX < 450){dx=-dx}
 }
 function checkCircleCollisions(circumX, circumY, theta){
-  //var force = Math.sqrt(dx*dx + dy*dy);
-  //dampen
-  //force = force * .9;
-  //console.log(force);
-  //roof
-  //(x-h)^2 + (y-k)^2 = 205^2
-  //(y-250)(y-250) = 205^2 -(ballX-300)^2
-  //y^2 - 500y + 250^2 =
-  //y (y - 500) = 205^2 - 250^2 - (ballX-300)^2
-  //y-250)^2 =
-  //var x = r cos t;
-  var roofTheta = Math.acos((circumX-300)/205);
-  //console.log(roofTheta);
-  //console.log(Math.sin(Math.PI/2));
+
+  var roofTheta = Math.acos((circumX-300 + Math.cos(theta))/205);
   var roofY = 250-(205 * Math.sin(roofTheta));
-  //var roofY = 250 - (205 * )
-  //var roofY = -20475 - ((ballX-300) * (ballX-300));
-  //console.log(roofY);
-  if (circumY -force <= roofY+5){
-    dy =  Math.abs(Math.sin(theta)) * force *.95;
-    if (ballX > 300){
-      dx = - Math.abs(Math.cos(theta)) * force *.95;
-    }
-    else {
-      dx = Math.abs(Math.cos(theta)) * force *.95;
-    }
-    return false;
+  //check roof collision
+  if (circumY -force*Math.sin(theta) <= roofY){
+
+    var xo = Math.cos(roofTheta -.1);
+    var yo = Math.sin(roofTheta -.1);
+
+    var xt = Math.cos(roofTheta +.1);
+    var yt = Math.sin(roofTheta +.1);
+
+    var roofTangent = Math.atan2((yt - yo), (xt - xo));
+    if (roofTangent < 0){
+			roofTangent+=Math.PI*2;
+			if (roofTangent >= (5* Math.PI) /4 ){
+				console.log("half");
+				rootTangent -= Math.PI/2;
+			}
+		}
+
+
+    console.log("rt " + roofTangent);
+		//if (theta > Math.PI){theta += Math.PI*2}
+    console.log("theta " + theta);
+    var collisionAngle =(roofTangent+theta);
+
+    console.log("theta-rt " + collisionAngle);
+
+    dy =  (Math.sin(collisionAngle)) * force;
+    console.log("dy " + dy);
+    dx = (Math.cos(collisionAngle)) * force;
+
+    console.log("dx " +dx);
+    console.log("cX " +circumX+"cY " +circumY);
+
+    return true;
   }
 
-  //ramps
+  //check ramps  FIX
   if (ballY + ballRadius >= 440){
 
 //absolute value???
 
     //left ramp
     if (ballX-ballRadius < 175){
-      if (circumY + force  >= (440 - (.5 *(95 - circumX))-3 )){
-        dx =  (Math.abs(Math.cos(theta)) * force*.95 + .87*gravity);
-        dy =  ((Math.sin(theta)) * force *.95);
-        if (dy>0){dy=-dy}
-        //console.log("left ramp");
-        return false;
+      if (circumY + force*Math.sin(theta)  >= (440 - (.5 *(95 - circumX))-3 )){
+        var collisionAngle = theta - 2.679;
+        dx =  (Math.abs(Math.cos(collisionAngle)) * force);
+        dy =  ((Math.sin(collisionAngle)) * force);
+        //if (dy>0){dy=-dy}
+        console.log("left ramp");
+        return true;
       }
     }
     //right ramp
-    else if (ballX+ballRadius > 375 && ballX + ballRadius < 455 && circumY + force >= (440 + (.5 *(455 - circumX))-3 )){
-      dx = - Math.abs(Math.cos(theta)) * force*.95 - .87*gravity;
-      dy =  ((Math.sin(theta)) * force *.95);
-      if (dy>0){dy=-dy}
-      //console.log("right ramp " + dy);
-      return false;
+    else if (ballX+ballRadius > 375 && ballX + ballRadius < 455 && circumY + force *Math.sin(theta)>= (440 + (.5 *(455 - circumX))-3 )){
+      var collisionAngle = theta - .46;
+      dx = - Math.abs(Math.cos(collisionAngle)) * force;
+      dy =  ((Math.sin(collisionAngle)) * force);
+      //if (dy>0){dy=-dy}
+      console.log("right ramp " + dy);
+      return true;
     }
   }
 
@@ -250,7 +305,7 @@ function checkCircleCollisions(circumX, circumY, theta){
 		dy = -dy;
 	}
   */
-  return true;
+  return false;
 }
 
 var plungerUp = false;
@@ -299,38 +354,29 @@ function gameLoop(){
 }
 
 function setBounds(){
-	leftWall = new wall(95, 250, 95, 560);
-	rightOut = new wall(505, 250, 505, 560);
-	rightIn = new wall(455, 300, 455, 560);
-	//removeCenterLine = new wall(275, 0, 275, 600);
-
-	bottomLeft = new wall(95, 440, 175, 480);
-	bottomRight = new wall(455, 440, 375, 480);
-	//removebottom = new wall(95, 440, 455, 440);
-	//remoooooove = new wall(175, 480, 375, 480);
-
-	/*draw top
-	con.beginPath();
-	con.moveTo(95, 180);
-	con.bezierCurveTo(95, 10, 505, 10, 505, 180);
-	con.stroke();
-  */
+  //vertical bounds
+	leftWall = new line(95, 250, 95, 560);
+	rightOut = new line(505, 250, 505, 560);
+	rightIn = new line(455, 300, 455, 560);
+	//ramps
+	bottomLeft = new line(95, 440, 175, 480);
+	bottomRight = new line(455, 440, 375, 480);
   //draw roof
   con.beginPath();
   con.arc(300, 250, 205, Math.PI, 0);
-  //con.closePath();
+  con.lineWidth = "10";
   con.stroke();
-}
-//
-//
-function wall(fromX, fromY, toX, toY){
-	con.beginPath();
-		con.lineWidth = "10";
-		con.strokeStyle= "black";
-		con.moveTo(fromX, fromY);
-		con.lineTo(toX, toY);
-		con.stroke();
-	con.closePath();
+
+  //draws a line
+  function line(fromX, fromY, toX, toY){
+    con.beginPath();
+    con.lineWidth = "10";
+    con.strokeStyle= "black";
+    con.moveTo(fromX, fromY);
+    con.lineTo(toX, toY);
+    con.stroke();
+    con.closePath();
+  }
 }
 function setPlunger(){
 	con.beginPath();
@@ -394,7 +440,6 @@ function clearKeys(e){
 }
 //a rainbow gradiant border
 //with title
-//
 function border(){
 	//make gradients for border
 	var ro = con.createLinearGradient(0,0,600,0);
@@ -430,7 +475,6 @@ function border(){
 	or.addColorStop(1, "red");
 
 	//draw frame
-	//
 	//top
 	con.fillStyle = ro;
 	con.fillRect(0, 0, 600, 20);
@@ -455,7 +499,6 @@ function border(){
 	//inner left
 	con.fillStyle = or;
 	con.fillRect(20, 40, 20, 520);
-
 	//draw title
 	con.font = "30px Arial";
 	con.fillStyle = "white";
